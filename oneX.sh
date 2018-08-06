@@ -15,31 +15,26 @@
 #-----------------------------------  
 
 # ------------------------- Global argument assign begin -------------------------
+#
 # --------------------------------------------------------------------------------
 # Error code
 readonly ARG_ERROR=1
 readonly ARG_INVALID=2
 readonly NETWORK_ERROR=3
+readonly URL_FAILED=4
 readonly OK=0
 
 # Color code
 readonly RED="\e[31m"
+readonly GREEN="\e[32m"
 readonly PLAIN="\e[0m"
 
 # Argument
 readonly ARG1="${1}"
 readonly ARG2="${2}"
 
-# Global var
-# readonly G_rank="(latest|popular|curators-choice)"
-# readonly temp_categories="(all abstract action animals architecture conceptual \
-#             creative-edit documentary everyday fine-art-nude humour landscape\
-#             macro mood night performance portrait still-life street \
-#             underwater wildlife)"
-# readonly G_categories=`echo ${temp_categories} | tr ' ' '|'`
-# readonly G_uid="([0-9]{3,12})"
-# readonly G_re_match="http[s]?://1x.com/photo/[0-9]{4,12}/(${G_rank}:${G_categories}${G_uid}?)?"
-readonly G_re_url_match="http[s]?://1x.com/photo/[0-9]{4,12}"
+readonly G_re_url_match="http[s]?://1x.com/photo/[0-9]{1,12}"
+readonly G_re_image_match="https://1x.com/images/user/[0-f]+"
 
 # Define which is URL url
 ARG_JUDGE(){
@@ -80,11 +75,13 @@ then
     echo -e "The ${RED}URL${PLAIN} invalid"
     exit ${ARG_INVALID}
 fi
-
-readonly SINGLE_URL=`echo ${ARG_STRING} | cut -d ' ' -f1`
 readonly SINGLE_DL_DIR=`echo ${ARG_STRING} | cut -d ' ' -f2`
 
+# Varable
+Single_Url=`echo ${ARG_STRING} | cut -d ' ' -f1`
+
 # ------------------------- Global argument assign end ---------------------------
+# 
 # --------------------------------------------------------------------------------
 
 
@@ -113,17 +110,72 @@ network_try(){
     fi
 }
 
-source_jpg_link(){
-    :
+get_url_jpg_info(){
+    local source_url=${1}
+    local url_contents=`curl -s -i ${source_url}`
+    local title=`echo ${url_contents} | egrep  -o "<title>.*</title>" | \
+                sed -e 's!<[^>]*>!!g' -e s'!1x - !!' -e s'!by.*!!'`
+    local hd_url=`echo ${url_contents} | egrep -o ${G_re_image_match} | \
+                uniq -d | sed 's!$!-hd2.jpg!'`
+
+    local title=`echo ${title} | tr ' ' '_' | sed 's!\.!!'`
+    local array=([1]="${hd_url}" [2]="${title}") 
+    echo "${array[*]}"
 }
 
 single_pic_download(){
-    local source_url=${1}
-    local download_dir=${2}
-    echo $source_url
-    echo $download_dir
+    local url_title=`get_url_jpg_info ${Single_Url}`
+    local hd_url=`echo ${url_title} | cut -d ' ' -f1`
+    local title=`echo ${url_title} | cut -d ' ' -f2`
+
+    if [ "${url_title}" == " " ]
+    then
+        echo -e "The ${RED}URL${PLAIN} can't access."
+    elif [ "${url_title}" == "${hd_url} " ]
+    then
+       local title=`echo $RANDOM | md5sum | cut -c 3-18`
+    fi
+
+    local file_name="${title}.jpg"
+    wget ${hd_url} -O ${SINGLE_DL_DIR}/${file_name}
+
+    # Compatible with the non-HD(ld) photoes.
+    if [ "$?" != "0" ]
+    then
+        local sd_url=`echo ${hd_url} | sed 's!hd2!sd!'`
+        wget ${sd_url} -O ${SINGLE_DL_DIR}/${file_name}
+        if [ "$?" != "0" ]
+        then
+            echo -e "Something wrong happen.. "
+            echo -e "This photo ${RED}can't${PLAIN} download success!"
+        fi
+    fi
 }
 
+pic_download(){
+    single_pic_download
+    while true
+    do
+        Single_Url=""
+        echo -e " Input ${GREEN}URL${PLAIN} or ${GREEN}(Q)uit${PLAIN} to exit: \c"
+        read temp_new_url
+
+        local new_url="${temp_new_url:-"none"}"
+        local is_quit=`echo "${new_url}" | tr '[A-Z]' '[a-z]'`
+        if [ "${new_url}" == "none" ]
+        then
+            continue
+        elif [ "${is_quit}" == 'q' ]
+        then
+            break
+        else
+            new_url=`echo ${new_url} | sed 's![[:space:]]!!g'`
+            Single_Url="${new_url}"
+            single_pic_download
+        fi
+
+    done
+}
 
 main(){
     # network_try
@@ -136,7 +188,7 @@ main(){
 
     elif [ "${arg_num}" -gt 0 -a "${arg_num}" -le 2 ]
     then
-        single_pic_download "${SINGLE_URL}" "${SINGLE_DL_DIR}"
+        pic_download
         exit ${OK} 
     else
         exit ${OK} 
