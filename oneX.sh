@@ -31,13 +31,15 @@ readonly ARG1="${1}"
 readonly ARG2="${2}"
 
 # Global var
-readonly G_rank="(latest|popular|curators-choice)"
-readonly temp_categories="(all abstract action animals architecture conceptual \
-            creative-edit documentary everyday fine-art-nude humour landscape\
-            macro mood night performance portrait still-life street \
-            underwater wildlife)"
-readonly G_categories=`echo ${temp_categories} | tr ' ' '|'`
-readonly G_re_match="http[s]?://1x.com/photo/[0-9]{4,12}/${G_rank}:${G_categories}"
+# readonly G_rank="(latest|popular|curators-choice)"
+# readonly temp_categories="(all abstract action animals architecture conceptual \
+#             creative-edit documentary everyday fine-art-nude humour landscape\
+#             macro mood night performance portrait still-life street \
+#             underwater wildlife)"
+# readonly G_categories=`echo ${temp_categories} | tr ' ' '|'`
+# readonly G_uid="([0-9]{3,12})"
+# readonly G_re_match="http[s]?://1x.com/photo/[0-9]{4,12}/(${G_rank}:${G_categories}${G_uid}?)?"
+readonly G_re_url_match="http[s]?://1x.com/photo/[0-9]{4,12}"
 
 # Define which is URL url
 ARG_JUDGE(){
@@ -45,28 +47,27 @@ ARG_JUDGE(){
     local t_arg2="${2}"
     local cur_dir=`pwd`
     local arg2="${t_arg2:-${cur_dir}}"
+    local re_match="${G_re_url_match}/?.*"
 
     if [ "${arg2}" != ${cur_dir} ]
     then
         arg2="${cur_dir}/${arg2}"
     fi
       
-    echo "${arg1}" | egrep "${G_re_match}" &> /dev/null
+    echo "${arg1}" | egrep "${re_match}" &> /dev/null
     if [ "$?" -eq "0" ]
     then
         local url="${arg1}"
         local download_dir="${arg2}"
     else
-        echo "${arg2}" | egrep "${G_re_match}" &> /dev/null
+        echo "${arg2}" | egrep "${re_match}" &> /dev/null
         if [ "$?" -eq "0" ]
         then
             local url="${arg2}"
             local download_dir="${arg1}"
-        else
-           echo -e "The ${RED}URL${PLAIN} invalid"
-           exit ${ARG_INVALID}
         fi
     fi
+    url=`echo ${url} | egrep -o ${G_re_url_match}`
     local array=([1]="${url}" [2]="${download_dir}") 
     echo "${array[*]}"
 }
@@ -74,10 +75,15 @@ ARG_JUDGE(){
 
 # specific arg
 ARG_STRING=`ARG_JUDGE ${ARG1} ${ARG2}`
+if [ "${ARG_STRING}" == " " ]
+then
+    echo -e "The ${RED}URL${PLAIN} invalid"
+    exit ${ARG_INVALID}
+fi
+
 readonly SINGLE_URL=`echo ${ARG_STRING} | cut -d ' ' -f1`
 readonly SINGLE_DL_DIR=`echo ${ARG_STRING} | cut -d ' ' -f2`
-# echo ${SINGLE_URL}
-# echo ${SINGLE_DL_DIR}
+
 # ------------------------- Global argument assign end ---------------------------
 # --------------------------------------------------------------------------------
 
@@ -120,7 +126,7 @@ single_pic_download(){
 
 
 main(){
-    network_try
+    # network_try
     local arg_num=${#}
 
     if [ "${arg_num}" -ge 3 ]
