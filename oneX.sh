@@ -27,14 +27,17 @@ readonly OK=0
 # Color code
 readonly RED="\e[31m"
 readonly GREEN="\e[32m"
+readonly BLUE="\e[34m"
 readonly PLAIN="\e[0m"
+readonly BOLD="\e[1m"
+readonly UNDERLINE="\e[4m"
 
 # Argument
 readonly ARG1="${1}"
 readonly ARG2="${2}"
 
 readonly G_re_url_match="http[s]?://1x.com/photo/[0-9]{1,12}"
-readonly G_re_image_match="https://1x.com/images/user/[0-f]+"
+readonly G_re_image_match="http[s]?://1x.com/images/user/[0-f]+"
 
 # Define which is URL url
 ARG_JUDGE(){
@@ -63,21 +66,24 @@ ARG_JUDGE(){
         fi
     fi
 
-    # Check the directory exist or not.
-    if [ ! -d "${download_dir}" ]
-    then
-        mkdir -p "${download_dir}" 
-    fi
     url=`echo ${url} | egrep -o ${G_re_url_match}`
     local array=([1]="${url}" [2]="${download_dir}") 
     echo "${array[*]}"
 }
 
+usage(){
+    local arg_num=${1}
+    echo -e "Usage: ${RED}${BOLD}${0}${PLAIN} ${BLUE}${UNDERLINE}${BOLD} 1x.com_URL ${PLAIN}"
+    echo -e "       ${RED}${BOLD}${0}${PLAIN} ${BLUE}${UNDERLINE}${BOLD} 1x.com_URL ${PLAIN} ${BLUE} directory ${PLAIN}"
+    echo -e "       ${RED}${BOLD}${0}${PLAIN} ${BLUE} directory ${PLAIN} ${BLUE}${UNDERLINE}${BOLD} 1x.com_URL ${PLAIN}"
+    echo -e "${0} takes exactly ${RED}[1-2]${PLAIN} argument (${arg_num} given)"
+}
 
 # specific arg
 ARG_STRING=`ARG_JUDGE ${ARG1} ${ARG2}`
 if [ "${ARG_STRING}" == " " ]
 then
+    usage $#
     echo -e "The ${RED}URL${PLAIN} invalid"
     exit ${ARG_INVALID}
 fi
@@ -90,12 +96,6 @@ Single_Url=`echo ${ARG_STRING} | cut -d ' ' -f1`
 # 
 # --------------------------------------------------------------------------------
 
-
-usage(){
-    local arg_num=${1}
-    echo -e "Usage: ${0}"
-    echo -e "${0} takes exactly ${RED}[0-2]${PLAIN} argument (${arg_num} given)"
-}
 
 network_try(){
     local index="https://1x.com/"
@@ -159,7 +159,15 @@ single_pic_download(){
     fi
 }
 
+dir_exist_checking(){
+    if [ ! -d "${SINGLE_DL_DIR}" ]
+    then
+        mkdir -p "${SINGLE_DL_DIR}"  &> /dev/null
+    fi
+}
+
 pic_download(){
+    dir_exist_checking
     single_pic_download
     while true
     do
@@ -193,11 +201,8 @@ main(){
         usage ${arg_num}
         exit ${ARG_ERROR}
 
-    elif [ "${arg_num}" -gt 0 -a "${arg_num}" -le 2 ]
-    then
-        pic_download
-        exit ${OK} 
     else
+        pic_download
         exit ${OK} 
     fi
 }
