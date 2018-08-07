@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #-------------CopyRight-------------  
-#   Name: 
+#   Name: oneX
 #   Version Number: 1.1
-#   Type: 
+#   Type: photoes crawler
 #   Language: bash shell  
 #   Date: 2018-7-24
 #   Author: Alopex
@@ -44,7 +44,7 @@ ARG_JUDGE(){
     local arg2="${t_arg2:-${cur_dir}}"
     local re_match="${G_re_url_match}/?.*"
 
-    if [ "${arg2}" != ${cur_dir} ]
+    if [ "${arg2}" != "${cur_dir}" ]
     then
         arg2="${cur_dir}/${arg2}"
     fi
@@ -59,8 +59,14 @@ ARG_JUDGE(){
         if [ "$?" -eq "0" ]
         then
             local url="${arg2}"
-            local download_dir="${arg1}"
+            local download_dir="${cur_dir}/${arg1}"
         fi
+    fi
+
+    # Check the directory exist or not.
+    if [ ! -d "${download_dir}" ]
+    then
+        mkdir -p "${download_dir}" 
     fi
     url=`echo ${url} | egrep -o ${G_re_url_match}`
     local array=([1]="${url}" [2]="${download_dir}") 
@@ -137,7 +143,8 @@ single_pic_download(){
     fi
 
     local file_name="${title}.jpg"
-    wget ${hd_url} -O ${SINGLE_DL_DIR}/${file_name}
+    # wget ${hd_url} -O ${SINGLE_DL_DIR}/${file_name}
+    echo "wget ${hd_url} -O ${SINGLE_DL_DIR}/${file_name}"
 
     # Compatible with the non-HD(ld) photoes.
     if [ "$?" != "0" ]
