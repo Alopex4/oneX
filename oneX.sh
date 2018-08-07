@@ -36,7 +36,8 @@ readonly UNDERLINE="\e[4m"
 readonly ARG1="${1}"
 readonly ARG2="${2}"
 
-readonly G_re_url_match="http[s]?://1x.com/photo/[0-9]{1,12}"
+readonly G_re_photo_match="http[s]?://1x.com/photo/[0-9]{1,12}"
+readonly G_re_member_match="http[s]?://1x.com/member/.*"
 readonly G_re_image_match="http[s]?://1x.com/images/user/[0-f]+"
 
 # Define which is URL url
@@ -45,28 +46,28 @@ ARG_JUDGE(){
     local t_arg2="${2}"
     local cur_dir=`pwd`
     local arg2="${t_arg2:-${cur_dir}}"
-    local re_match="${G_re_url_match}/?.*"
+    local photo_match="${G_re_photo_match}/?.*"
+    local member_match="${G_re_member_match}"
 
     if [ "${arg2}" != "${cur_dir}" ]
     then
         arg2="${cur_dir}/${arg2}"
     fi
       
-    echo "${arg1}" | egrep "${re_match}" &> /dev/null
+    echo "${arg1}" | egrep "${photo_match}|${member_match}" &> /dev/null
     if [ "$?" -eq "0" ]
     then
         local url="${arg1}"
         local download_dir="${arg2}"
     else
-        echo "${arg2}" | egrep "${re_match}" &> /dev/null
+        echo "${arg2}" | egrep "${photo_match}|${member_match}" &> /dev/null
         if [ "$?" -eq "0" ]
         then
             local url="${arg2}"
             local download_dir="${cur_dir}/${arg1}"
         fi
     fi
-
-    url=`echo ${url} | egrep -o ${G_re_url_match}`
+    url=`echo ${url} | egrep -o ${G_re_photo_match}`
     local array=([1]="${url}" [2]="${download_dir}") 
     echo "${array[*]}"
 }
@@ -188,8 +189,20 @@ pic_download(){
             Single_Url="${new_url}"
             single_pic_download
         fi
-
     done
+}
+
+bulk_download(){
+    :
+}
+
+downloading(){
+    if [[ ${Single_Url} =~ ${G_re_photo_match} ]]
+    then
+        pic_download
+    fi
+
+    bulk_download
 }
 
 main(){
@@ -200,9 +213,8 @@ main(){
     then
         usage ${arg_num}
         exit ${ARG_ERROR}
-
     else
-        pic_download
+        downloading
         exit ${OK} 
     fi
 }
