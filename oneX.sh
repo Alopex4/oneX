@@ -39,6 +39,8 @@ readonly ARG2="${2}"
 readonly G_re_photo_match="http[s]?://1x.com/photo/[0-9]{1,12}"
 readonly G_re_member_match="http[s]?://1x.com/member/.*"
 readonly G_re_image_match="http[s]?://1x.com/images/user/[0-f]+"
+readonly G_re_publish_match='Published <span style="color: #[0-f]{3};">\([0-9]{1,}\)'
+readonly G_re_memberID_match='"member_userid" value="[0-9]{1,}"'
 
 # Define which is URL url
 ARG_JUDGE(){
@@ -67,7 +69,7 @@ ARG_JUDGE(){
             local download_dir="${cur_dir}/${arg1}"
         fi
     fi
-    url=`echo ${url} | egrep -o ${G_re_photo_match}`
+    # url=`echo ${url} | egrep -o ${G_re_photo_match}`
     local array=([1]="${url}" [2]="${download_dir}") 
     echo "${array[*]}"
 }
@@ -130,8 +132,47 @@ get_url_jpg_info(){
     echo "${array[*]}"
 }
 
+
+get_member_id(){
+    local contents=${1}
+    # local id=`echo ${contents} | egrep -o "${G_re_memberID_match}" | \
+    #         egrep -o "[0-9]{1,}"`
+    local id=`echo ${contents} | egrep -o "${G_re_memberID_match}" | \
+            egrep -o "[0-9]{1,}"`
+    echo "${id}"
+}
+
+get_web_page_info(){
+    local source_url=${1}
+    local url_contents=`curl -s -i ${source_url}`
+    local space=""
+
+    if [[ ${Single_Url} =~ ${G_re_photo_match} ]]
+    then
+        local title=`echo ${url_contents} | egrep  -o "<title>.*</title>" | \
+                sed -e 's!<[^>]*>!!g' -e s'!1x - !!' -e s'!by.*!!' | \
+                tr ' ' '_' | sed 's!\.!!'`
+        local hd_url=`echo ${url_contents} | egrep -o ${G_re_image_match} | \
+                uniq -d | sed 's!$!-hd2.jpg!'`
+
+    elif [[ ${Single_Url} =~ ${G_re_member_match} ]]
+    then
+        local total_photoes=`echo ${url_contents} | egrep  -o \
+            "${G_re_publish_match}" | egrep -o '\([0-9]{1,}\)'| egrep -o '[0-9]{1,}'`
+        local name=`echo ${url_contents} | egrep  -o "<title>.*</title>" | \
+                sed -e 's!<[^>]*>!!g' -e s'!1x - !!' -e s'! - Latest.*!!' | \
+                sed 's! !-!g'`
+    fi
+    # Attention here
+    # Because the url is a huge string(has space)
+    # The parameter must use "double quotes"
+    local id=`get_member_id "${url_contents}"`
+    local array=([1]="${hd_url:-${total_photoes}}" [2]="${title:-${name}}" [3]="${id:-${space}}") 
+    echo "${array[*]}"
+}
+
 single_pic_download(){
-    local url_title=`get_url_jpg_info ${Single_Url}`
+    local url_title=`get_web_page_info ${Single_Url}`
     local hd_url=`echo ${url_title} | cut -d ' ' -f1`
     local title=`echo ${url_title} | cut -d ' ' -f2`
 
@@ -192,17 +233,24 @@ pic_download(){
     done
 }
 
+
 bulk_download(){
-    :
+    local photoes_name_id=`get_web_page_info ${Single_Url}`
+    local member_photoes=`echo ${photoes_name_id} | cut -d ' ' -f1`
+    local member_name=`echo ${photoes_name_id} | cut -d ' ' -f2`
+    local member_id=`echo ${photoes_name_id} | cut -d ' ' -f3`
+    echo ${member_photoes}
+    echo ${member_name}
+    echo ${member_id}
 }
 
 downloading(){
     if [[ ${Single_Url} =~ ${G_re_photo_match} ]]
     then
         pic_download
+    else
+        bulk_download
     fi
-
-    bulk_download
 }
 
 main(){
