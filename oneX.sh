@@ -36,6 +36,7 @@ readonly UNDERLINE="\e[4m"
 readonly ARG1="${1}"
 readonly ARG2="${2}"
 
+# Regular express
 readonly G_re_photo_match="http[s]?://1x.com/photo/[0-9]{1,12}"
 readonly G_re_member_match="http[s]?://1x.com/member/.*"
 readonly G_re_image_match="http[s]?://1x.com/images/user/[0-f]+"
@@ -92,6 +93,7 @@ then
 fi
 readonly SINGLE_DL_DIR=`echo ${ARG_STRING} | cut -d ' ' -f2`
 
+
 # Varable
 Single_Url=`echo ${ARG_STRING} | cut -d ' ' -f1`
 
@@ -118,20 +120,6 @@ network_try(){
         exit ${NETWORK_ERROR}
     fi
 }
-
-get_url_jpg_info(){
-    local source_url=${1}
-    local url_contents=`curl -s -i ${source_url}`
-    local title=`echo ${url_contents} | egrep  -o "<title>.*</title>" | \
-                sed -e 's!<[^>]*>!!g' -e s'!1x - !!' -e s'!by.*!!'`
-    local hd_url=`echo ${url_contents} | egrep -o ${G_re_image_match} | \
-                uniq -d | sed 's!$!-hd2.jpg!'`
-
-    local title=`echo ${title} | tr ' ' '_' | sed 's!\.!!'`
-    local array=([1]="${hd_url}" [2]="${title}") 
-    echo "${array[*]}"
-}
-
 
 get_member_id(){
     local contents=${1}
@@ -233,15 +221,38 @@ pic_download(){
     done
 }
 
+get_xml_info(){
+   local photoes="${1}" 
+# Initial the meta_info
+   local MemID="${2}"
+   local FormID='0'
+#The link can't separate
+   local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
+   local contents=`curl -s -i ${Meta_Info}`
+
+   for(( FormID=30; $[ photoes / FormID ]> 0; FormID=${FormID}+30 ))
+   do
+        local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
+        local t_contents=`curl -s -i ${Meta_Info}`
+        local contents="${contents} ${t_contents}"
+   done
+   local bulk_link=`echo ${contents} | egrep -o '/images/user/[a-z0-9]{1,}' | \
+     sed 's!/images/user/!!g' | sed 's!^!https://1x.com/images/user/!' | \
+     sed 's!$!-hd2.jpg!'`
+
+    dir_exist_checking
+    echo "${bulk_link}" > "${SINGLE_DL_DIR}/links.txt"
+}
 
 bulk_download(){
     local photoes_name_id=`get_web_page_info ${Single_Url}`
     local member_photoes=`echo ${photoes_name_id} | cut -d ' ' -f1`
     local member_name=`echo ${photoes_name_id} | cut -d ' ' -f2`
     local member_id=`echo ${photoes_name_id} | cut -d ' ' -f3`
-    echo ${member_photoes}
-    echo ${member_name}
-    echo ${member_id}
+    get_xml_info "${member_photoes}" ${member_id}
+    # echo ${member_photoes}
+    # echo ${member_name}
+    # echo ${member_id}
 }
 
 downloading(){
