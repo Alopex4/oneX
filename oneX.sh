@@ -221,7 +221,7 @@ pic_download(){
     done
 }
 
-get_xml_info(){
+get_link_photoID_file(){
    local photoes="${1}" 
 # Initial the meta_info
    local MemID="${2}"
@@ -229,30 +229,31 @@ get_xml_info(){
 #The link can't separate
    local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
    local contents=`curl -s -i ${Meta_Info}`
-
+    echo "$Meta_Info"
    for(( FormID=30; $[ photoes / FormID ]> 0; FormID=${FormID}+30 ))
    do
         local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
         local t_contents=`curl -s -i ${Meta_Info}`
         local contents="${contents} ${t_contents}"
    done
-   local bulk_link=`echo ${contents} | egrep -o '/images/user/[a-z0-9]{1,}' | \
+   local bulk_links=`echo ${contents} | egrep -o '/images/user/[a-z0-9]{1,}' | \
      sed 's!/images/user/!!g' | sed 's!^!https://1x.com/images/user/!' | \
      sed 's!$!-hd2.jpg!'`
+   local photo_links=`echo ${contents} | egrep -o '<a href="/photo/[0-9]{1,}' | \
+     sed 's!<a href="!!g' | sed 's!^!https://1x.com!'`
 
     dir_exist_checking
-    echo "${bulk_link}" > "${SINGLE_DL_DIR}/links.txt"
+    echo "${bulk_links}" > "${SINGLE_DL_DIR}/bulk_links.txt"
+    echo "${photo_links}" > "${SINGLE_DL_DIR}/photo_links.txt"
 }
 
 bulk_download(){
+    # echo ${Single_Url}
     local photoes_name_id=`get_web_page_info ${Single_Url}`
     local member_photoes=`echo ${photoes_name_id} | cut -d ' ' -f1`
     local member_name=`echo ${photoes_name_id} | cut -d ' ' -f2`
     local member_id=`echo ${photoes_name_id} | cut -d ' ' -f3`
-    get_xml_info "${member_photoes}" ${member_id}
-    # echo ${member_photoes}
-    # echo ${member_name}
-    # echo ${member_id}
+    get_link_photoID_file "${member_photoes}" ${member_id}
 }
 
 downloading(){
