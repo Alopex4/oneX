@@ -251,7 +251,6 @@ set_default_dir(){
 }
 
 bulk_pics_download(){
-
     while read photo_link
     do
     (   Single_Url="${photo_link}"
@@ -259,15 +258,44 @@ bulk_pics_download(){
         # However it cost too much time.
         # single_pic_download ${Single_Url}
 
+        # wget ` curl -s ${photo_link}  | egrep -o \
+        #  '(\/images\/user\/)[a-zA-Z0-9]{32}(-hd)[0-9]?\.jpg' | \
+        #   sed 's/^/https:\/\/1x\.com/' ` -P ${SINGLE_DL_DIR}
         wget ` curl -s ${photo_link}  | egrep -o \
          '(\/images\/user\/)[a-zA-Z0-9]{32}(-hd)[0-9]?\.jpg' | \
-          sed 's/^/https:\/\/1x\.com/' ` -P ${SINGLE_DL_DIR}
+          sed 's/^/https:\/\/1x\.com/' | sed 's!-hd4!-hd2!g'` -P ${SINGLE_DL_DIR}
     )&
     done < "${SINGLE_DL_DIR}/photo_links.txt"
+    wait
+}
+
+print_acInfo(){
+    local photo_position=${1}
+    echo    "-----------------------------------------------"
+    echo    "-----------------------------------------------"
+    echo -e " Photo store Directory: "
+    echo -e " ${BOLD}${BLUE}${photo_position}${PLAIN}"
+    echo    "-----------------------------------------------"
+    echo    "-----------------------------------------------"
 }
 
 archive_or_not(){
-    :
+   local member_name="${1}"
+   local the_pwd=`pwd`
+   local cur_dir=${SINGLE_DL_DIR}
+   reset 
+   echo -e "${BOLD}${RED}Archive and Compress${PLAIN} the bulk photoes? (y/N) \c"
+   read -t 10 answer
+   local answer=`echo ${answer} | tr '[A-Z]' '[a-z]'`
+   if [ "${answer}" == "y" ]
+   then
+        target_file="${member_name}.tar.gz"
+        source_file=`echo ${SINGLE_DL_DIR} | awk -F '/' '{print $NF}' | sed 's!$!/!'`
+        tar -zcf ${target_file} ${source_file}
+        rm -rf ${SINGLE_DL_DIR}
+        target_file="${the_pwd}/${target_file}"
+   fi
+   print_acInfo ${target_file:-${cur_dir}}
 }
 
 bulk_download(){
