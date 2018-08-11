@@ -52,26 +52,41 @@ ARG_JUDGE(){
     local photo_match="${G_re_photo_match}/?.*"
     local member_match="${G_re_member_match}"
 
-    if [ "${arg2}" != "${cur_dir}" ]
-    then
-        arg2="${cur_dir}/${arg2}"
-    fi
-      
     echo "${arg1}" | egrep "${photo_match}|${member_match}" &> /dev/null
-    if [ "$?" -eq "0" ]
+    if [ "$?" -eq 0 ]
     then
         local url="${arg1}"
-        local download_dir="${arg2}"
-    else
-        echo "${arg2}" | egrep "${photo_match}|${member_match}" &> /dev/null
-        if [ "$?" -eq "0" ]
+        if [ "${arg2}" != "${cur_dir}" ]
         then
-            local url="${arg2}"
-            local download_dir="${cur_dir}/${arg1}"
+            download_dir="${cur_dir}/${arg2}"
+        fi
+    else
+        local url="${arg2}"
+        if [ "${arg1}" != "${cur_dir}" ]
+        then
+            download_dir="${cur_dir}/${arg1}"
         fi
     fi
+    # if [ "${arg2}" != "${cur_dir}" ]
+    # then
+    #     arg2="${cur_dir}/${arg2}"
+    # fi
+      
+    # echo "${arg1}" | egrep "${photo_match}|${member_match}" &> /dev/null
+    # if [ "$?" -eq "0" ]
+    # then
+    #     local url="${arg1}"
+    #     local download_dir="${arg2}"
+    # else
+    #     echo "${arg2}" | egrep "${photo_match}|${member_match}" &> /dev/null
+    #     if [ "$?" -eq "0" ]
+    #     then
+    #         local url="${arg2}"
+    #         local download_dir="${cur_dir}/${arg1}"
+    #     fi
+    # fi
     # url=`echo ${url} | egrep -o ${G_re_photo_match}`
-    local array=([1]="${url}" [2]="${download_dir}") 
+    local array=([1]="${url}" [2]="${download_dir:-${cur_dir}}") 
     echo "${array[*]}"
 }
 
@@ -229,21 +244,20 @@ get_link_photoID_file(){
 #The link can't separate
    local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
    local contents=`curl -s -i ${Meta_Info}`
-    echo "$Meta_Info"
    for(( FormID=30; $[ photoes / FormID ]> 0; FormID=${FormID}+30 ))
    do
         local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
         local t_contents=`curl -s -i ${Meta_Info}`
         local contents="${contents} ${t_contents}"
    done
-   local bulk_links=`echo ${contents} | egrep -o '/images/user/[a-z0-9]{1,}' | \
-     sed 's!/images/user/!!g' | sed 's!^!https://1x.com/images/user/!' | \
-     sed 's!$!-hd2.jpg!'`
+#    local bulk_links=`echo ${contents} | egrep -o '/images/user/[a-z0-9]{1,}' | \
+#      sed 's!/images/user/!!g' | sed 's!^!https://1x.com/images/user/!' | \
+#      sed 's!$!-hd2.jpg!'`
    local photo_links=`echo ${contents} | egrep -o '<a href="/photo/[0-9]{1,}' | \
      sed 's!<a href="!!g' | sed 's!^!https://1x.com!'`
 
     dir_exist_checking
-    echo "${bulk_links}" > "${SINGLE_DL_DIR}/bulk_links.txt"
+    # echo "${bulk_links}" > "${SINGLE_DL_DIR}/bulk_links.txt"
     echo "${photo_links}" > "${SINGLE_DL_DIR}/photo_links.txt"
 }
 
