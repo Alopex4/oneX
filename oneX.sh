@@ -67,25 +67,6 @@ ARG_JUDGE(){
             download_dir="${cur_dir}/${arg1}"
         fi
     fi
-    # if [ "${arg2}" != "${cur_dir}" ]
-    # then
-    #     arg2="${cur_dir}/${arg2}"
-    # fi
-      
-    # echo "${arg1}" | egrep "${photo_match}|${member_match}" &> /dev/null
-    # if [ "$?" -eq "0" ]
-    # then
-    #     local url="${arg1}"
-    #     local download_dir="${arg2}"
-    # else
-    #     echo "${arg2}" | egrep "${photo_match}|${member_match}" &> /dev/null
-    #     if [ "$?" -eq "0" ]
-    #     then
-    #         local url="${arg2}"
-    #         local download_dir="${cur_dir}/${arg1}"
-    #     fi
-    # fi
-    # url=`echo ${url} | egrep -o ${G_re_photo_match}`
     local array=([1]="${url}" [2]="${download_dir:-${cur_dir}}") 
     echo "${array[*]}"
 }
@@ -106,10 +87,7 @@ then
     echo -e "The ${RED}URL${PLAIN} invalid"
     exit ${ARG_INVALID}
 fi
-readonly SINGLE_DL_DIR=`echo ${ARG_STRING} | cut -d ' ' -f2`
-
-
-# Varable
+SINGLE_DL_DIR=`echo ${ARG_STRING} | cut -d ' ' -f2`
 Single_Url=`echo ${ARG_STRING} | cut -d ' ' -f1`
 
 # ------------------------- Global argument assign end ---------------------------
@@ -154,7 +132,7 @@ get_web_page_info(){
     then
         local title=`echo ${url_contents} | egrep  -o "<title>.*</title>" | \
                 sed -e 's!<[^>]*>!!g' -e s'!1x - !!' -e s'!by.*!!' | \
-                tr ' ' '_' | sed 's!\.!!'`
+                tr ' ' '_' | sed 's!\.!!' | sed 's!_$!!'`
         local hd_url=`echo ${url_contents} | egrep -o ${G_re_image_match} | \
                 uniq -d | sed 's!$!-hd2.jpg!'`
 
@@ -175,7 +153,7 @@ get_web_page_info(){
 }
 
 single_pic_download(){
-    local url_title=`get_web_page_info ${Single_Url}`
+    local url_title=`get_web_page_info ${1}`
     local hd_url=`echo ${url_title} | cut -d ' ' -f1`
     local title=`echo ${url_title} | cut -d ' ' -f2`
 
@@ -213,7 +191,7 @@ dir_exist_checking(){
 
 pic_download(){
     dir_exist_checking
-    single_pic_download
+    single_pic_download "${Single_Url}"
     while true
     do
         Single_Url=""
@@ -231,7 +209,7 @@ pic_download(){
         else
             new_url=`echo ${new_url} | sed 's![[:space:]]!!g'`
             Single_Url="${new_url}"
-            single_pic_download
+            single_pic_download "${Single_Url}"
         fi
     done
 }
@@ -261,13 +239,46 @@ get_link_photoID_file(){
     echo "${photo_links}" > "${SINGLE_DL_DIR}/photo_links.txt"
 }
 
+set_default_dir(){
+    if [ "${SINGLE_DL_DIR}" == `pwd` ]
+    then
+        SINGLE_DL_DIR="${SINGLE_DL_DIR}/1x"
+        if [ ! -d "${SINGLE_DL_DIR}" ]
+        then
+            mkdir "${SINGLE_DL_DIR}" > /dev/null
+        fi
+    fi
+}
+
+bulk_pics_download(){
+
+    while read photo_link
+    do
+    (   Single_Url="${photo_link}"
+        # This approach is much better
+        # However it cost too much time.
+        # single_pic_download ${Single_Url}
+
+        wget ` curl -s ${photo_link}  | egrep -o \
+         '(\/images\/user\/)[a-zA-Z0-9]{32}(-hd)[0-9]?\.jpg' | \
+          sed 's/^/https:\/\/1x\.com/' ` -P ${SINGLE_DL_DIR}
+    )&
+    done < "${SINGLE_DL_DIR}/photo_links.txt"
+}
+
+archive_or_not(){
+    :
+}
+
 bulk_download(){
-    # echo ${Single_Url}
     local photoes_name_id=`get_web_page_info ${Single_Url}`
     local member_photoes=`echo ${photoes_name_id} | cut -d ' ' -f1`
     local member_name=`echo ${photoes_name_id} | cut -d ' ' -f2`
     local member_id=`echo ${photoes_name_id} | cut -d ' ' -f3`
+    set_default_dir
     get_link_photoID_file "${member_photoes}" ${member_id}
+    bulk_pics_download
+    archive_or_not "${member_name}"
 }
 
 downloading(){
