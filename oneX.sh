@@ -316,8 +316,11 @@ downloading(){
     if [[ ${Single_Url} =~ ${G_re_photo_match} ]]
     then
         pic_download
-    else
+    elif [[ ${Single_Url} =~ ${G_re_member_match} ]]
+    then
         bulk_download
+    else
+        usage "1"
     fi
 }
 
