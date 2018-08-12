@@ -9,7 +9,7 @@
 #   Author: Alopex
 #   Email: alopex4@163.com
 #------------Environment------------  
-#   Terminal: column 80 line 24  
+#   Terminal: column 124 line 24  
 #   Linux 4.15.0-24-generic
 #   GNU Bash 4.3
 #-----------------------------------  
@@ -87,6 +87,7 @@ then
     echo -e "The ${RED}URL${PLAIN} invalid"
     exit ${ARG_INVALID}
 fi
+# Global varable
 SINGLE_DL_DIR=`echo ${ARG_STRING} | cut -d ' ' -f2`
 Single_Url=`echo ${ARG_STRING} | cut -d ' ' -f1`
 
@@ -95,6 +96,9 @@ Single_Url=`echo ${ARG_STRING} | cut -d ' ' -f1`
 # --------------------------------------------------------------------------------
 
 
+# ------------------------- Invoke function begin --------------------------------
+# 
+# --------------------------------------------------------------------------------
 network_try(){
     local index="https://1x.com/"
     local try_time=3
@@ -114,10 +118,15 @@ network_try(){
     fi
 }
 
+dir_exist_checking(){
+    if [ ! -d "${SINGLE_DL_DIR}" ]
+    then
+        mkdir -p "${SINGLE_DL_DIR}"  &> /dev/null
+    fi
+}
+
 get_member_id(){
     local contents=${1}
-    # local id=`echo ${contents} | egrep -o "${G_re_memberID_match}" | \
-    #         egrep -o "[0-9]{1,}"`
     local id=`echo ${contents} | egrep -o "${G_re_memberID_match}" | \
             egrep -o "[0-9]{1,}"`
     echo "${id}"
@@ -166,8 +175,7 @@ single_pic_download(){
     fi
 
     local file_name="${title}.jpg"
-    # wget ${hd_url} -O ${SINGLE_DL_DIR}/${file_name}
-    echo "wget ${hd_url} -O ${SINGLE_DL_DIR}/${file_name}"
+    wget ${hd_url} -O ${SINGLE_DL_DIR}/${file_name}
 
     # Compatible with the non-HD(ld) photoes.
     if [ "$?" != "0" ]
@@ -182,63 +190,6 @@ single_pic_download(){
     fi
 }
 
-dir_exist_checking(){
-    if [ ! -d "${SINGLE_DL_DIR}" ]
-    then
-        mkdir -p "${SINGLE_DL_DIR}"  &> /dev/null
-    fi
-}
-
-pic_download(){
-    dir_exist_checking
-    single_pic_download "${Single_Url}"
-    while true
-    do
-        Single_Url=""
-        echo -e " Input ${GREEN}URL${PLAIN} or ${GREEN}(Q)uit${PLAIN} to exit: \c"
-        read temp_new_url
-
-        local new_url="${temp_new_url:-"none"}"
-        local is_quit=`echo "${new_url}" | tr '[A-Z]' '[a-z]'`
-        if [ "${new_url}" == "none" ]
-        then
-            continue
-        elif [ "${is_quit}" == 'q' ]
-        then
-            break
-        else
-            new_url=`echo ${new_url} | sed 's![[:space:]]!!g'`
-            Single_Url="${new_url}"
-            single_pic_download "${Single_Url}"
-        fi
-    done
-}
-
-get_link_photoID_file(){
-   local photoes="${1}" 
-# Initial the meta_info
-   local MemID="${2}"
-   local FormID='0'
-#The link can't separate
-   local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
-   local contents=`curl -s -i ${Meta_Info}`
-   for(( FormID=30; $[ photoes / FormID ]> 0; FormID=${FormID}+30 ))
-   do
-        local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
-        local t_contents=`curl -s -i ${Meta_Info}`
-        local contents="${contents} ${t_contents}"
-   done
-#    local bulk_links=`echo ${contents} | egrep -o '/images/user/[a-z0-9]{1,}' | \
-#      sed 's!/images/user/!!g' | sed 's!^!https://1x.com/images/user/!' | \
-#      sed 's!$!-hd2.jpg!'`
-   local photo_links=`echo ${contents} | egrep -o '<a href="/photo/[0-9]{1,}' | \
-     sed 's!<a href="!!g' | sed 's!^!https://1x.com!'`
-
-    dir_exist_checking
-    # echo "${bulk_links}" > "${SINGLE_DL_DIR}/bulk_links.txt"
-    echo "${photo_links}" > "${SINGLE_DL_DIR}/photo_links.txt"
-}
-
 set_default_dir(){
     if [ "${SINGLE_DL_DIR}" == `pwd` ]
     then
@@ -250,6 +201,28 @@ set_default_dir(){
     fi
 }
 
+get_link_photoID_file(){
+   local photoes="${1}" 
+    # Initial the meta_info
+   local MemID="${2}"
+   local FormID='0'
+    #The link can't separate
+   local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
+   local contents=`curl -s -i ${Meta_Info}`
+   for(( FormID=30; $[ photoes / FormID ]> 0; FormID=${FormID}+30 ))
+   do
+        local Meta_Info="https://1x.com/backend/loadmore.php?app=member&from=${FormID}&cat=all&sort=latest&userid=${MemID}"
+        local t_contents=`curl -s -i ${Meta_Info}`
+        local contents="${contents} ${t_contents}"
+   done
+   local photo_links=`echo ${contents} | egrep -o '<a href="/photo/[0-9]{1,}' | \
+     sed 's!<a href="!!g' | sed 's!^!https://1x.com!'`
+
+    dir_exist_checking
+    echo "${photo_links}" > "${SINGLE_DL_DIR}/photo_links.txt"
+}
+
+
 bulk_pics_download(){
     while read photo_link
     do
@@ -258,9 +231,6 @@ bulk_pics_download(){
         # However it cost too much time.
         # single_pic_download ${Single_Url}
 
-        # wget ` curl -s ${photo_link}  | egrep -o \
-        #  '(\/images\/user\/)[a-zA-Z0-9]{32}(-hd)[0-9]?\.jpg' | \
-        #   sed 's/^/https:\/\/1x\.com/' ` -P ${SINGLE_DL_DIR}
         wget ` curl -s ${photo_link}  | egrep -o \
          '(\/images\/user\/)[a-zA-Z0-9]{32}(-hd)[0-9]?\.jpg' | \
           sed 's/^/https:\/\/1x\.com/' | sed 's!-hd4!-hd2!g'` -P ${SINGLE_DL_DIR}
@@ -298,6 +268,39 @@ archive_or_not(){
    print_acInfo ${target_file:-${cur_dir}}
 }
 
+# ------------------------- Invoke function end ----------------------------------
+# 
+# --------------------------------------------------------------------------------
+
+# ### Management function ###
+# ### Download single picture 
+pic_download(){
+    dir_exist_checking
+    single_pic_download "${Single_Url}"
+    while true
+    do
+        Single_Url=""
+        echo -e " Input ${GREEN}URL${PLAIN} or ${GREEN}(Q)uit${PLAIN} to exit: \c"
+        read temp_new_url
+
+        local new_url="${temp_new_url:-"none"}"
+        local is_quit=`echo "${new_url}" | tr '[A-Z]' '[a-z]'`
+        if [ "${new_url}" == "none" ]
+        then
+            continue
+        elif [ "${is_quit}" == 'q' ]
+        then
+            break
+        else
+            new_url=`echo ${new_url} | sed 's![[:space:]]!!g'`
+            Single_Url="${new_url}"
+            single_pic_download "${Single_Url}"
+        fi
+    done
+}
+
+# ### Management function ###
+# ### bulk photo download 
 bulk_download(){
     local photoes_name_id=`get_web_page_info ${Single_Url}`
     local member_photoes=`echo ${photoes_name_id} | cut -d ' ' -f1`
@@ -318,8 +321,9 @@ downloading(){
     fi
 }
 
+# ### main function ###
 main(){
-    # network_try
+    network_try
     local arg_num=${#}
 
     if [ "${arg_num}" -ge 3 ]
