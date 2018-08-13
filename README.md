@@ -29,6 +29,19 @@ You can exit this interactive by press [Q]
  Input URL or (Q)uit to exit: https://1x.com/photo/<photo_id>
 ```
 
+Examle:
+1. Single photo download 
+
+![image](https://github.com/Alopex4/oneX/blob/master/images/single_download.png)
+
+2. `ls` show the photo
+
+![image](https://github.com/Alopex4/oneX/blob/master/images/single_show.png)
+
+3. use `eog` show the photo
+
+![image](https://github.com/Alopex4/oneX/blob/master/images/show_singe_.png)
+
 ## Batch download (specific directory or not)
 If you doesn't specific the dir, all photoes will store in current path directory 1x/
 Two approach here >>> 
@@ -45,5 +58,19 @@ After all the photoes downloaded, the archive will pressent
 Archive and Compress the bulk photoes? (y/N) 
 ```
 Just choose what you neeed.
+
+Examle
+1. Bash photoes download
+
+![image](https://github.com/Alopex4/oneX/blob/master/images/bash_%20download.png)
+
+2. Archive and show the store position
+
+![image](https://github.com/Alopex4/oneX/blob/master/images/bash_archive_show.png)
+
+3. Use GUI to show the photoes
+
+![image](https://github.com/Alopex4/oneX/blob/master/images/show_bash.png)
+
 
 
